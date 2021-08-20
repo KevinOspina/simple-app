@@ -1,29 +1,37 @@
 pipeline {
     agent any
-
+    environment{
+        DOCKERHUB_CREDENTIALS= credentials('kevinospina-dockerhub')
+    }
     stages {
          stage('Checkout') {
             steps {
-                checkout([$class: 'GitSCM', branches: [[name: '*/master']], browser: [$class: 'GithubWeb', repoUrl: 'https://github.com/KevinOspina/simple-app.git'], extensions: [], userRemoteConfigs: [[credentialsId: '5588d1ab-8ef0-45f4-961a-85d26e404591', url: 'https://github.com/KevinOspina/simple-app']]])
+               checkout([$class: 'GitSCM', branches: [[name: '*/master']], browser: [$class: 'GithubWeb', repoUrl: 'https://github.com/KevinOspina/simple-app.git'], extensions: [], userRemoteConfigs: [[credentialsId: '5588d1ab-8ef0-45f4-961a-85d26e404591', url: 'https://github.com/KevinOspina/simple-app']]])
             }
         }
         
         stage('Build'){
-            steps{                   
-                sh 'node --version'
-                sh 'npm --version'            
-                 script {
-            
-                     withCredentials([usernamePassword(credentialsId: '37267417-47b3-42ac-9844-3f307ddb9306', passwordVariable: 'password', usernameVariable: 'username')]){
-
-                          sh '''
-                           echo "${PASS} | docker login -u ${USER} --password-stdin"
-                          '''
-                        def app = docker.build("kevinospina03/simple-app")
-                     }
-                }
+            steps{
+                 sh 'docker build -t kevinospina03/simple-app:latest .'
             }
         }
+        
+        stage('Login'){
+            steps{
+                
+                sh 'echo $PASS | docker login -u $USER --password-stdin'
+                 //sh '''
+                 //    echo "${PASS} | docker login -u ${USER} --password-stdin"
+                 //'''
+            }
+        }
+        
+        stage('Push'){
+            steps{
+                 sh 'docker push kevinospina03/simple-app:latest'
+            }
+        }
+        
         
         stage('Deploy') {
             steps {
@@ -44,8 +52,11 @@ pipeline {
         
         }
     }
-    
-    
+    post {
+        always {
+            sh 'docker logout'
+        }
+
+    }
+
 }
-
-
